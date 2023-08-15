@@ -1,7 +1,905 @@
-{
-  "extends": "expo/tsconfig.base",
-  "compilerOptions": {
-    "strict": true
+import { createUserTask, getTasks, moveTask, getCurrentTask, deleteAllTasks, deleteUserTask, updateUserTask, updateTask} from './RealmDB/Actions';
+
+const numeralDictionary = {
+    0: 'первой',
+    1: 'второй',
+    2: 'третьей',
+    3: 'четвёртой',
+    4: 'пятой',
+    5: 'шестой',
+    6: 'седьмой',
+    7: 'восьмой',
+    8: 'девятой',
+    9: 'десятой',
+    10: 'одиннадцатой',
+    11: 'двенадцатой',
+    12: 'тринадцатой',
+    13: 'четырнадцатой',
+    14: 'пятнадцатой',
+    15: 'шестнадцатой',
+    16: 'семнадцатой',
+    17: 'восемнадцатой',
+    18: 'девятнадцатой',
+    19: 'двадцатой',
+    20: 'двадцать первой'
+  };
+
+  function getNumeralCase(number) {
+    return numeralDictionary[number] || 'Неподдерживаемое число';
   }
+export default function TaskRouter(TaskInJson) {
+
+    console.log(typeof TaskInJson)
+
+    // console.log(JSON.parse(TaskInJson))
+
+    const foundedTasks = TaskInJson.map((task,index)=> {
+        console.log('VVOD V ROUTER');
+        console.log(task)
+        const {ACT,DATE,TIME,TASK,PER,LEMMACT,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER} = task
+
+        console.log(LEMMPER[0]);
+        if (LEMMPER[0] && LEMMPER[0] !== 'я' && LEMMPER[0] !== 'мой') {
+            console.log(13);
+            return `пользователь ${PER[0]} не найден`
+        }
+
+    
+        
+        console.log(LEMMACT)
+        if (LEMMACT[0] === 'найти' || LEMMACT[0] === "какие" || LEMMACT[0] === "какой") {
+            console.log(task);
+            const tasks = getTasks({...task, PER: ["я"]})
+            console.log(tasks);
+            console.log(`кол-во текущих задач: ${tasks.length}`)
+            if (tasks.length > 0) {
+                console.log(`Найдена задача ${tasks[0].name} в ${tasks[0].time} ${tasks[0].date}`);
+                const foundedTasks = tasks.reduce((acc,i,index)=> {
+                   return acc + ` ${index+1}) ${i.name} в ${i.time} ${i.date}'.`
+                },`Всего найдено задач: ${tasks.length}'. `)
+                console.log(tasks);
+                console.log(17);
+                console.log(foundedTasks);
+                return foundedTasks
+            } else {
+                return 'Задача не найдена'
+            }
+
+        }
+
+        if (LEMMACT[0] === 'кто' || LEMMACT[0] === "кто создал" || LEMMACT[0] === "кто дал") {
+            console.log(task);
+            const tasks = getTasks({...task, PER: ["я"]})
+            console.log(tasks);
+            console.log(`кол-во текущих задач: ${tasks.length}`)
+            if (tasks.length > 0) {
+                console.log(`Найдена задача ${tasks[0].name} в ${tasks[0].time} ${tasks[0].date}`);
+                const foundedTasks = tasks.reduce((acc,i,index)=> {
+                   return acc + ` ${index+1}) ${i.name} в ${i.time} ${i.date}'.`
+                },`Всего найдено задач: ${tasks.length}'. `)
+                console.log(tasks);
+                console.log(17);
+                console.log(foundedTasks);
+                return foundedTasks
+            } else {
+                return 'Задача не найдена'
+            }
+
+        }
+
+
+
+        else if (LEMMACT[0] === 'добавь') {
+            const missing_fields = [];
+            if (!TASK) {
+                missing_fields.push("задача");
+            }
+            if (!DATE) {
+                missing_fields.push("дата");
+            }
+            if (!TIME) {
+                missing_fields.push("время");
+            }
+            if (!PER) {
+                missing_fields.push("пользователь");
+            }
+            if (missing_fields.length === 1 || missing_fields.length === 2) {
+                const answerToUser = missing_fields.reduce((acc, i) => {
+                    return acc + ' ' + i
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+            } else if (missing_fields.length === 3) {
+                const answerToUser = missing_fields.reduce((acc, i, index) => {
+                    if (index !== 2){   
+                        return acc + ', ' + i
+                    } else {
+                        return acc + ' и ' + i
+                    }
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+
+            } else if (missing_fields.length === 4) {
+
+                return "Вы не указали дату, время, исполнителя и название задачи";
+            } else {
+                console.log(123)
+                // Добавляем задачу в базу данных для указанного пользователя на указанное время и дату
+                createUserTask({...task, PER: ["я"]});
+                return "Задача успешно добавлена";
+            }
+        }
+
+
+
+        else if (LEMMACT[0] === "удаль") {
+            console.log('UDALENIE V ROUTER');
+            const missing_fields = [];
+            if (!TASK) {
+                missing_fields.push("задача");
+            }
+            if (!DATE) {
+                missing_fields.push("дата");
+            }
+            if (!TIME) {
+                missing_fields.push("время");
+            }
+            if (!PER) {
+                missing_fields.push("пользователь");
+            }
+
+            if (missing_fields.length === 1 || missing_fields.length === 2) {
+                const answerToUser = missing_fields.reduce((acc, i) => {
+                    return acc + ' ' + i
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+            } else if (missing_fields.length === 3) {
+                const answerToUser = missing_fields.reduce((acc, i, index) => {
+                    if (index !== 2){   
+                        return acc + ', ' + i
+                    } else {
+                        return acc + ' и ' + i
+                    }
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+
+            } else if (missing_fields.length === 4) {
+
+                return "Вы не указали дату, время, исполнителя и название задачи";
+            } else {
+                // Удаляем задачу из базы данных для указанного пользователя на указанное время и дату
+                deleteUserTask({...task, PER: ["я"]});
+                return "Задача успешно удалена";
+            }
+        }
+        
+
+        
+        else if (LEMMACT[0] === 'изменить') {
+            console.log(213);
+            console.log(LEMMACT[0]);
+            const missing_fields = [];
+            if (!TASK) {
+                missing_fields.push("задача");
+            }
+            if (!DATE) {
+                missing_fields.push("дата");
+            }
+            if (!TIME) {
+                missing_fields.push("время");
+            }
+            if (!PER) {
+                missing_fields.push("пользователь");
+            }
+            if (missing_fields.length === 1 || missing_fields.length === 2) {
+                const answerToUser = missing_fields.reduce((acc, i) => {
+                    return acc + ' и ' + i
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+            } else if (missing_fields.length === 3) {
+                const answerToUser = missing_fields.reduce((acc, i, index) => {
+                    if (index !== 2){   
+                        return acc + ', ' + i
+                    } else {
+                        return acc + ' и ' + i
+                    }
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+
+            } else if (missing_fields.length === 4) {
+
+                return "Вы не указали дату, время, исполнителя и название задачи";
+            } else {
+                // Редактируем задачу в базе данных для указанного пользователя на указанное время и дату
+                console.log('ROUTER UPDATING');
+                updateTask({...task, PER: ["я"]});
+                return "Задача успешно отредактирована";
+            }
+        }
+
+
+
+        else if (LEMMACT[0] === 'перенести') {
+            const missing_fields = [];
+            if (!TASK) {
+                missing_fields.push("задача");
+            }
+            if (!DATE) {
+                missing_fields.push("дата");
+            }
+            if (!TIME) {
+                missing_fields.push("время");
+            }
+            if (!PER) {
+                missing_fields.push("пользователь");
+            }
+            if (missing_fields.length === 1 || missing_fields.length === 2) {
+                const answerToUser = missing_fields.reduce((acc, i) => {
+                    return acc + ' и ' + i
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+            } else if (missing_fields.length === 3) {
+                const answerToUser = missing_fields.reduce((acc, i, index) => {
+                    if (index !== 2){   
+                        return acc + ', ' + i
+                    } else {
+                        return acc + ' и ' + i
+                    }
+                })
+                console.log(answerToUser);
+                return `Вы не указали поля ${answerToUser}`;
+
+            } else if (missing_fields.length === 4) {
+
+                return "Вы не указали дату, время, исполнителя и название задачи";
+            } else {
+                console.log('PODVIGAEDM TASK V ROUTERE');
+                moveTask({...task, PER: ["я"]});
+                return "Задача успешно перенесена";
+                
+            }
+        }
+
+        else if (LEMMACT[0] === 'добавить пользователя') {
+            if (PER) {
+                // Добавляем нового пользователя в базу данных
+                addUserToDatabase(PER);
+            } else {
+                return "Не указаны все необходимые параметры для добавления пользователя";
+            }
+        } 
+        
+        else if (LEMMACT[0] === 'удалить пользователя') {
+            if (PER) {
+                // Удаляем пользователя из базы данных
+                deleteUserFromDatabase(PER);
+            } else {
+                return "Не указаны все необходимые параметры для удаления пользователя";
+            }
+        } 
+        
+        else if (LEMMACT[0] === 'редактировать пользователя') {
+            if (PER && new_person) {
+                // Редактируем информацию о пользователе в базе данных
+                editUserInDatabase(PER, new_person);
+            } else {
+                return "Не указаны все необходимые параметры для редактирования пользователя";
+            }
+        } 
+        
+        else {
+            return `Неизвестное действие ${LEMMACT}` ;
+        }
+
+
+    }) // Добавьте остальные ветвления в соответствии с вашими условиями
+
+    console.log('Выполнено общих задач после разбития на предложения');
+    console.log(foundedTasks);
+
+    const stringAnswer = foundedTasks.reduce((acc,i,index) => {
+        return acc + ` по ${getNumeralCase(index)} задаче: ` + i + '.'
+    }, '')
+
+    console.log(stringAnswer)
+
+    if (foundedTasks.length > 1) {
+        return stringAnswer 
+    }
+    return foundedTasks[0]
+
 }
 
+
+import React from 'react';
+import {SafeAreaView,StyleSheet,Text,TouchableOpacity,View,PermissionsAndroid, NativeEventEmitter, NativeModules, Alert, } from 'react-native';
+import Voice from '@react-native-voice/voice'
+import RNFS from 'react-native-fs';
+import {PorcupineManager} from '@picovoice/porcupine-react-native';
+import Tts from 'react-native-tts'
+import BackgroundJob from 'react-native-background-actions';
+import RNFetchBlob from 'rn-fetch-blob';
+import { startRecordingRedux, stopRecordingRedux, isRecordingRedux } from './redux/reduxHelper';
+import { useSelector} from 'react-redux';
+import axios from 'axios';
+import { createUserRecord, getAllUsers, deleteAllUsers, deleteUserRecord, updateUserRecord,createUserTask, getTasks, deleteUserTask, moveTask} from './RealmDB/Actions';
+import TaskRouter from './TaskRouter';
+
+    const VoiceModule = NativeModules.VoiceModule;
+    const eventEmitter = new NativeEventEmitter(VoiceModule);
+    const ttsEventEmitter = new NativeEventEmitter()
+    const { MicrophoneModule } = NativeModules
+    const eventAudioFocusEmitter = new NativeEventEmitter(NativeModules.RCTDeviceEventEmitter);
+
+    const AndroidParams = {
+      KEY_PARAM_PAN: -1,
+      KEY_PARAM_VOLUME: 0.9,
+      KEY_PARAM_STREAM: 'STREAM_MUSIC',
+    }
+
+    
+  
+
+    const documentDir = RNFetchBlob.fs.dirs.DocumentDir
+    const documentDir1 = RNFetchBlob.fs.asset('hello-marry_en_android_v2_2_0.ppn')
+    const KEYWORD_FILE_NAME = 'Привет-Э-ни_ru_android_v2_2_0.ppn';
+    const MODEL_FILE_NAME = 'porcupine_params_ru.pv';
+    const filePath = `${documentDir}/${KEYWORD_FILE_NAME}`;
+    const modelPath = `${documentDir}/${MODEL_FILE_NAME}`
+    console.log(documentDir);
+    console.log(documentDir1)
+    console.log(modelPath);
+
+    const assetFilePath = 'Привет-Э-ни_ru_android_v2_2_0.ppn';
+    const destFilePath = `${RNFS.DocumentDirectoryPath}/${assetFilePath}`;
+
+    const modelFilePath = 'porcupine_params_ru.pv';
+    const destModelPath = `${RNFS.DocumentDirectoryPath}/${modelFilePath}`;
+
+    RNFS.copyFileAssets(assetFilePath, destFilePath)
+    .then(() => {
+      console.log('File copied successfully.');
+      // You can now use the copied file at destFilePath
+    })
+    .catch((error) => {
+      console.log(`Error copying file: ${error}`);
+    });
+  
+
+  RNFS.copyFileAssets(modelFilePath, destModelPath)
+    .then(() => {
+      console.log('Model copied successfully.');
+      // You can now use the copied file at destFilePath
+    })
+    .catch((error) => {
+      console.log(`Error copying file: ${error}`);
+    });
+  
+
+    RNFetchBlob.fs.ls(documentDir)
+    .then(files => console.log(`Files in directory: ${files}`))
+    .catch(error => console.log(`Error: ${error}`));
+
+    const requestMicrophonePermission = async () => {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: 'Microphone Permission',
+              message: 'App needs access to your microphone.',
+              buttonPositive: 'OK',
+              buttonNegative: 'Cancel',
+            }
+        );
+
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('Microphone permission granted.');
+          // Выполняйте необходимые действия, когда разрешение предоставлено
+          // ...
+        } else {
+          console.log('Microphone permission denied.');
+          // Обработайте случай, когда разрешение не предоставлено
+          // ...
+        }
+      } catch (error) {
+        console.log('Error while requesting microphone permission:', error);
+      }
+    };
+
+    requestMicrophonePermission()
+
+    // const requestForegroundServicePermission = async () => {
+    //   if (Platform.OS === 'android') {
+    //     try {
+    //       const granted = await PermissionsAndroid.request(
+    //         PermissionsAndroid.PERMISSIONS.FOREGROUND_SERVICE,
+    //         {
+    //           title: 'Foreground Service Permission',
+    //           message: 'This app requires permission to run in the foreground.',
+    //           buttonPositive: 'OK',
+    //         },
+    //       );
+    
+    //       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+    //         // Permission granted, start the foreground service
+    //         startForegroundService();
+    //       } else {
+    //         // Permission denied, handle the situation accordingly
+    //       }
+    //     } catch (error) {
+    //       // Handle permission request error
+    //     }
+    //   } else {
+    //     // Platform is not Android, handle accordingly
+    //   }
+    // };
+
+    // requestForegroundServicePermission()
+
+  
+    
+    let detectionCallback = async (keywordIndex) => {
+
+      
+      
+      await porcupineManager.stop().then(()=>{
+        if (keywordIndex === 0) {
+          eventAudioFocusEmitter.removeAllListeners('audioFocusChange')
+          Tts.speak('Слушаю!', { androidParams: AndroidParams})
+        }
+        console.log('Porcupine heard HELLO MARRY')
+      })
+
+      
+    };
+
+    const tasks = [
+      { id: 1, description: 'Task 1' },
+      { id: 2, description: 'Task 2' },
+    ];
+    
+
+
+
+    const processErrorCallback = (error) => {
+      console.error(error);
+    };
+
+    
+              //  Инициализация picovoice porcupine слова активации, внутри функции активации 
+              //  вызываются слушатели событий  tts-finish и onSpeechResults, и их выключатели
+              //  в функциях обработки команд, позволяя перезагружать слушатели при каждом
+              //  включении фонового процеса.
+
+
+    let porcupineManager
+
+    const initializePorcupine = async () => {
+      porcupineManager =  await PorcupineManager.fromKeywordPaths(
+        "XVeenrHlsFkhHhzmXA35n9vRfAdWspXJVRVeAyIvbKc96khf1EpnKQ==",
+        [filePath],
+        detectionCallback,
+        processErrorCallback,
+        modelPath,
+        [0.3]
+      );
+
+                  // О Б Р А Б О Т К А      У С Л Ы Ш А Н Н О Г О      Т Е К С Т А
+
+      const ttsStarter = ttsEventEmitter.addListener('tts-finish', (event) => {
+        startRecording()
+        console.log('Speech finished' + event);
+      });
+
+      
+
+      eventEmitter.addListener('onSpeechError', async (event) => {
+        try {
+          console.log('TRYEING TO START on ERROR');
+      
+          await new Promise((resolve) => {
+            // Simulate a delay or any necessary asynchronous task
+            setTimeout(() => {
+              resolve();
+            }, 100); // Adjust the delay as needed
+          });
+          // eventEmitter.removeAllListeners('onSpeechError')
+          // console.log('DD')
+
+          await porcupineManager.start()
+          
+          console.log('Successful start')
+        } catch (e) {
+          console.log('Error', e);
+        }
+      })
+
+
+
+
+      eventEmitter.addListener('onSpeechResults', async (event) => {
+        console.log(event.value[0]);
+        if (event.value[0].length = 0) {
+          Alert.alert('Speech No Words')
+        } else if (event.value[0]==='отбой') {
+          ttsEventEmitter.removeAllListeners('tts-finish')
+          Voice.stop()
+          eventAudioFocusEmitter.removeAllListeners('audioFocusChange')
+          eventAudioFocusEmitter.addListener('audioFocusChange', async (focusChange) => {
+            console.log(typeof focusChange);
+            console.log(focusChange);
+  
+            if (focusChange === 'AUDIOFOCUS_LOSS') {
+              await porcupineManager.stop();
+              console.log('hello marry Finished LOSS');
+              const checkMicrophone = () => {
+                console.log('CHECKING_MICROPHONE');
+                MicrophoneModule.isMicrophoneOn(async (isMicOn) => {
+                  console.log(isMicOn)
+                  
+                  if (isMicOn) {
+                      setTimeout(checkMicrophone, 5000);
+                  } else {
+                      await porcupineManager.start().then(()=> console.log('started micro'))
+                  }
+  
+                });
+              };
+                
+              setTimeout(async () => {
+                console.log('LoopingStartFunction');
+                checkMicrophone();
+              }, 5000);
+            } 
+  
+            else if (focusChange === "AUDIOFOCUS_LOSS_TRANSIENT") {
+              await porcupineManager.stop()
+              console.log('hello marry Finished LOSS_TRANSIENT ')
+            } 
+              
+            else if (focusChange === "AUDIOFOCUS_GAIN") {
+              await porcupineManager.start()
+              console.log('AUFIOFOCUS_GAIN Start')
+            } 
+  
+            else if (focusChange === "AUDIOFOCUS_GAIN_TRANSIENT") {
+                await porcupineManager.start()
+                  console.log('AUDIOFOCUS_GAIN_TRANSIENT')
+  
+            } else {
+                await porcupineManager.start()
+                console.log('hello marry start')
+            }
+          });
+
+          Tts.speak('Ушла на задний план', { androidParams: AndroidParams})
+          eventEmitter.addListener('tts-finish', (event) => {
+            eventEmitter.removeAllListeners('tts-finish')
+            eventEmitter.addListener('tts-finish', (event) => {
+              startRecording()
+              console.log('Speech finished' + event);
+            })
+          })
+          try {
+            console.log('TRYEING TO START');
+            await porcupineManager.start().then(() =>console.log('Successful start'));
+          } catch (e) {
+            console.log('Error', e);
+          }
+
+        } else if (['удали все задачи'].some(str => event.value[0].toLowerCase().includes(str))) {
+       
+            deleteAllUsers()
+            Tts.speak('Все задачи удалены.', { androidParams: AndroidParams })
+         
+    
+        }
+        else if (['исчезни'].some(str => event.value[0].toLowerCase().includes(str))) {
+          try {
+            await porcupineManager.stop()
+            ttsEventEmitter.removeAllListeners('tts-finish')
+            eventEmitter.removeAllListeners('onSpeechError')
+            stopRecordingRedux()
+            await BackgroundJob.stop()
+            Voice.stop()
+            Tts.speak('исчезаю', { androidParams: AndroidParams })
+          } catch (error) {
+            Alert.alert('Ошибка исчезновения', error.message);
+          }
+    
+        } else {
+          try {
+            const response = await axios.post('http://192.168.0.103:5000/process', {text: event.value[0]}, {
+              headers: {
+                'Content-Type': 'application/json', // Указываем, что отправляем JSON данные
+              },
+            });
+            console.log(313);
+            console.log(response.data);
+            const routerAnswer = TaskRouter(response.data)
+            console.log(444);
+            console.log(routerAnswer);
+            Tts.speak(routerAnswer, { androidParams: AndroidParams })
+
+          } catch (error) {
+            console.error('Error:', error);
+            return null;
+          }
+          
+        }
+
+      });
+
+
+      console.log('Porcupine ANNA Listener Initialised')
+      
+      eventEmitter.addListener('tts-finish', (event) => {
+          startRecording()
+          console.log('Speech finished' + event);
+      })
+
+      console.log('TTS_FINISH_ANNA_LISTENER OK')
+
+    }
+
+
+    initializePorcupine();
+
+    // createUserRecord(2, 'John Dueo');
+    // const users = getAllUsers();
+    // console.log(users);
+
+
+    const startRecording = async () => {
+      console.log('RN-Voice/Voice starting')
+      await porcupineManager.stop()
+      try {
+        console.log('rus')
+        await Voice.start('ru-RU').then(()=> console.log('Started Voice'))
+        
+      } catch (error) {
+        console.log(error)
+      }
+    }
+
+
+
+    const WakeWordTask = async taskData => {
+      
+      await porcupineManager.start()
+
+      await new Promise( async resolve => {
+        const {delay} = taskData
+        console.log(BackgroundJob.isRunning(), delay)
+        eventAudioFocusEmitter.removeAllListeners('audioFocusChange')
+        const subscription = eventAudioFocusEmitter.addListener('audioFocusChange', async (focusChange) => {
+          console.log(typeof focusChange);
+          console.log(focusChange);
+
+          if (focusChange === 'AUDIOFOCUS_LOSS') {
+            await porcupineManager.stop();
+            console.log('hello marry Finished LOSS');
+            const checkMicrophone = () => {
+              console.log('CHECKING_MICROPHONE');
+              MicrophoneModule.isMicrophoneOn(async (isMicOn) => {
+                console.log(isMicOn)
+                
+                if (isMicOn) {
+                    setTimeout(checkMicrophone, 5000);
+                } else {
+                    await porcupineManager.start().then(()=> console.log('started micro'))
+                }
+
+              });
+            };
+              
+            setTimeout(async () => {
+              console.log('LoopingStartFunction');
+              checkMicrophone();
+            }, 5000);
+          } 
+
+          else if (focusChange === "AUDIOFOCUS_LOSS_TRANSIENT") {
+            await porcupineManager.stop()
+            console.log('hello marry Finished LOSS_TRANSIENT ')
+          } 
+            
+          else if (focusChange === "AUDIOFOCUS_GAIN") {
+            console.log('AUFIOFOCUS_GAIN Start')
+          } 
+
+          else if (focusChange === "AUDIOFOCUS_GAIN_TRANSIENT") {
+                console.log('AUDIOFOCUS_GAIN_TRANSIENT')
+
+          } else {
+              await porcupineManager.start()
+              console.log('hello marry start')
+          }
+        });
+
+        await BackgroundJob.updateNotification({
+            taskDesc: 'Помощник активирован',
+            progressBar: 2,
+          })
+        // for (let i=0; BackgroundJob.isRunning(); i++) {
+         
+        //   console.log('Runned ->', i);
+  
+        //   await sleep(delay)
+        // }
+      })
+    }
+
+
+    const options = {
+      taskName: 'Анна ',
+      taskTitle: 'Анна ',
+      taskDesc: 'Анна, голосовой менеджер',
+      taskIcon: {
+          name: 'ic_launcher',
+          type: 'mipmap',
+      },
+      color: '#ff00ff',
+      linkingURI: 'exampleScheme://chat/jane', // See Deep Linking for more info
+      parameters: {
+        delay: 1000,
+      },
+    };
+
+    const runStartBackground = async () => {
+      if (!BackgroundJob.isRunning()) {
+        try {
+          console.log('TRYING TO START');
+          startRecordingRedux();
+          const ttsStarter = eventEmitter.addListener('tts-finish', (event) => {
+            startRecording();
+            console.log('Speech finished' + event);
+          });
+          await BackgroundJob.start(WakeWordTask, options);
+          console.log('Successful start');
+        } catch (error) {
+          console.log('Error', error);
+        }
+      } else {
+        console.log('Stopping');
+        try {
+          await Tts.stop()
+          await BackgroundJob.stop();
+          console.log('Stop background service');
+          await porcupineManager.stop();
+          console.log('Stop recording');
+          stopRecordingRedux();
+        } catch (error) {
+          console.log('Error', error);
+        }
+      }
+    };
+
+
+  function App() {
+
+ 
+    const isRecording = useSelector((state) => state.recording.isRecording);
+     
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.status}>
+          <Text style={styles.statusText}>
+            {isRecording ? 'Приложение работает' : 'Приложение неактивно '}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={async () => {
+            runStartBackground()  
+            // deleteAllUsers()
+            try {
+              const response = await axios.post('http://192.168.0.103:5000/process', {text: 'добавь мне задачу завтра сходить в магазин в 17 часов'}, {
+                headers: {
+                  'Content-Type': 'application/json', // Указываем, что отправляем JSON данные
+                },
+              });
+
+              ;
+            console.log(313);
+            console.log(response.data);
+            const routerAnswer = TaskRouter(response.data)
+            console.log(444);
+            console.log(routerAnswer);
+              // const answer = TaskRouter(response.data)
+
+              // console.log('1444');
+              // console.log(answer);
+
+
+            } catch (error) {
+              console.error('Error:', error);
+              return null;
+            }
+
+            // let newTask = {
+            //   ACT: 'найти задачу',
+            //   PER: 'У вас',
+            //   DATE: '2017-06-06T26:23:53',
+            //   TIME: '2017-06-06T29:23:53',
+            //   TASK: 'Помыть полы',
+            //   DATE2:'2017-06-06T26:23:53',
+            // }  
+
+            // createUserTask(newTask)
+            // moveTask(newTask)
+            // // console.log(getAllUsers());
+            // // console.log(getAllUsers()[0].time);
+            // // console.log(typeof getAllUsers()[0].time);
+            // const users = getTasks(newTask)
+            // console.log('найдены');
+            // console.log(users)
+          }
+          }
+          style={{...styles.recordButton, backgroundColor: isRecording === true ? 'red' : 'green' }}
+        >
+          <Text style={styles.recordButtonText}>
+            {isRecording ? 'Остановить' : 'Начать'}
+          </Text>
+          <Text style={styles.recordButtonText}>
+            запись
+          </Text>
+        </TouchableOpacity>
+
+      </SafeAreaView>
+    );
+  }
+
+
+const styles = StyleSheet.create({
+  container: {
+  flex: 1,
+  },
+  status: {
+  alignSelf: 'center',
+  marginTop: 110,
+  },
+  statusText: {
+  fontSize: 20,
+  color: 'black'
+  },
+  recordButton: {
+  alignSelf: 'center',
+  marginTop: 150,
+  backgroundColor: 'lightgreen',
+  height: 200,
+  width: 200,
+  borderRadius: 100,
+  alignItems: 'center',
+  justifyContent: 'center',
+  },
+  recordButtonText: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: 'white'
+  },
+  buttonRow: {
+  flexDirection: 'row',
+  width: '100%',
+  justifyContent: 'space-evenly',
+  marginTop: 50,
+  },
+  button: {
+  width: '40%',
+  height: 40,
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'lightblue',
+  },
+  buttonText: {
+  fontSize: 16,
+  },
+  });
+
+export default App;
