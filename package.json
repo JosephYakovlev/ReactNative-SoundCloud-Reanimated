@@ -1,28 +1,1357 @@
-{
-  "main": "node_modules/expo/AppEntry.js",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "eject": "expo eject"
-  },
-  "dependencies": {
-    "@react-native-community/masked-view": "0.1.10",
-    "expo": "~41.0.1",
-    "react": "16.13.1",
-    "react-dom": "16.13.1",
-    "react-native": "https://github.com/expo/react-native/archive/sdk-41.0.0.tar.gz",
-    "react-native-gesture-handler": "~1.10.2",
-    "react-native-reanimated": "~2.1.0",
-    "react-native-web": "~0.13.12"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.9.0",
-    "@types/react": "~16.9.35",
-    "@types/react-native": "~0.63.2",
-    "typescript": "~4.0.0"
-  },
-  "private": true
+//Actions.js
+
+import Realm from 'realm';
+import {User, Task} from './UserModel';
+import Fuse from 'fuse.js'
+import {calculateFutureMinutes, calculatePastMinutes, 
+        calculateFutureHours, calculatePastHours,
+        calculateFutureDates, calculatePastDates,
+        calculateFutureDateWeeks, calculatePastDateWeeks,
+        calculateFutureDateMonths, calculatePastDateMonths,
+        calculateFutureDateYears, calculatePastDateYears } from './Calculators';
+import { newTimeFutureParser } from './TimeParsers';
+import { newDateFutureParser } from './DateParsers';
+
+const realmConfig = {
+  schema: [User, Task],
+};
+const realm = new Realm(realmConfig);
+
+const TimeArrayOne = ['завтра', 'послезавтра', 'понедельник', 'вторник', 'среда', 
+                      'четверг', 'пятница', 'суббота', 'воскресенье',  'январь', 'февраль', 
+                      'март', 'апрель', 'май', 'июнь','июль', 'август', 'сентябрь', 'октябрь', 
+                      'ноябрь', 'декабрь','следующий' ]
+
+export function createUserTask(newTask) {
+
+    console.log(213123)
+    console.log(newTask);
+
+    const {ACT,DATE,TIME,TASK,PER,LEMMACT,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER,PREFIX,LEMMPREFIX} = newTask
+
+    let inputTime = LEMMTIME[0]
+    let inputHours = LEMMDATE[0]
+    const hasHour = ['час', 'часы'].some(word => inputTime.includes(word));
+    const hasMinute = ['минута', 'минуты'].some(word => inputTime.includes(word));
+    const hasDay = ['день', 'дни'].some(word => inputHours.includes(word));
+    const hasWeek = ['неделя', 'недели'].some(word => inputHours.includes(word));
+    const hasMonth = ['месяц', 'месяцы'].some(word => inputHours.includes(word));
+    const hasYear = ['год', 'лет'].some(word => inputHours.includes(word));
+    const match = (i: string) => i.match(/\d+/);
+    const firstNumber = (match: RegExpMatchArray | null) => (match ? parseInt(match[0]) : 0)
+    const timeMatch = (i: string): RegExpMatchArray | null => i.match(/(\d{2})\s*:\s*(\d{2})/);
+
+
+    const newDate = (DATE: string, PREFIX: string): Date => {
+        if (DATE) {
+            let taskDate: string | Date = DATE[0]
+
+            if (hasDay) { // 2 дня
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    taskDate = calculateFutureDates(firstNumber(match(DATE[0])) >= 1 ? firstNumber(match(DATE[0]))  : firstNumber(match(DATE[0])) + 1 , new Date())
+                } else {
+                    taskDate = calculateFutureDates(firstNumber(match(DATE[0])), new Date());
+                } 
+            } 
+            if (hasWeek) {
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    taskDate = calculateFutureDateWeeks(firstNumber(match(DATE[0])) >= 1 ? firstNumber(match(DATE[0]))  : firstNumber(match(DATE[0])) + 1 , new Date())
+                } else {
+                    taskDate = calculateFutureDateWeeks(firstNumber(match(DATE[0])), new Date());
+                } 
+            }
+            if (hasMonth) {
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    taskDate = calculateFutureDateMonths(firstNumber(match(DATE[0])) >= 1 ? firstNumber(match(DATE[0]))  : firstNumber(match(DATE[0])) + 1 , new Date())
+                } else {
+                    taskDate = calculateFutureDateMonths(firstNumber(match(DATE[0])), new Date());
+                }  
+            } 
+            if (hasYear) {
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    taskDate = calculateFutureDateYears(firstNumber(match(DATE[0])) >= 1 ? firstNumber(match(DATE[0]))  : firstNumber(match(DATE[0])) + 1 , new Date())
+                } else {
+                    taskDate = calculateFutureDateYears(firstNumber(match(DATE[0])), new Date());
+                } 
+            }
+
+            if (!(taskDate instanceof Date)) {
+                taskDate = new Date(taskDate);
+            }
+
+            return taskDate
+        } else {
+            return new Date()
+        }
+    };
+
+    console.log('TIME');
+    console.log(newTimeFutureParser(LEMMTIME, DATE, LEMMDATE, LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasHour, hasMinute));
+
+
+    console.log('DATE');
+    console.log(DATE[0]);
+    console.log('DATE2');
+    console.log(typeof DATE[0]);
+    
+    console.log(newDateFutureParser(DATE, LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear));
+    
+    console.log(newDate(DATE[0],LEMMPREFIX ? LEMMPREFIX : 'нет префикса'));
+
+//   realm.write(() => {
+//       // Создаем новую задачу в базе данных
+//       const users = realm.objects('User').sorted('id', true);
+//       console.log('users in createUserTask ( 186 str)');
+//       console.log(users);
+//       const newId = users.length > 0 ? users[0].id + 1 : 1;
+//       const fakeTasks = [
+//         { id: 1, description: 'Task 1' },
+//         { id: 2, description: 'Task 2' },
+//       ]
+
+//       console.log(newTask)
+//       const formedTask = {
+//         id: newId,
+//         name: newTask.TASK[0],
+//         person: newTask.PER[0],
+//         date: newDate(LEMMDATE,LEMMPREFIX),
+//         time: newTime(LEMMTIME,LEMMDATE,LEMMPREFIX),
+//         lemmaName: newTask.LEMMTASK[0],
+//         lemmaPerson: newTask.LEMMPER[0],
+//         lemmaDate: newTask.LEMMDATE[0],
+//         lemmaTime: newTask.LEMMTIME[0],
+//         tasks: fakeTasks
+//       }
+
+//       const a = realm.create('User', formedTask);
+//       console.log(a);
+//       console.log('Добавлена');
+//       return 'задание добавлено'
+//   });
+}
+
+
+export function getTasks(newTask) {
+
+    console.log("ИЩЕМ ЗАДАНИЕ B ACTIONS")
+    console.log(newTask)
+  
+    const {ACT,DATE,TIME,TASK,PER,LEMMACT,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER, CREATE} = newTask
+    const AllDataFromDB = realm.objects('User')
+    console.log(AllDataFromDB);
+
+    let data = []
+    let lemmaData = []
+    
+    if(PER) {
+        console.log("filtering PER")
+        const queryPer = PER[0];
+        console.log(`queryPer = ${queryPer}`)
+        const lemmQueryPer = LEMMPER[0]
+        console.log(`lemmQueryPer = ${lemmQueryPer}`)
+
+        const persons = AllDataFromDB.map(item => item.person);
+        console.log('persons');
+        console.log(persons);
+        const lemmaPerson = AllDataFromDB.map(item => item.lemmaPerson);
+        console.log('lemmaPersons');
+        console.log(lemmaPerson);
+        const options = {
+            includeScore: true,  // Включить оценку схожести
+            threshold: 0.3,      // Порог схожести (меньше - более строгий)
+        };
+        const fusePer = new Fuse(persons, options)
+        console.log('fuse persons');
+        console.log(fusePer);
+        const fuseLemmaPer = new Fuse(lemmaPerson, options)
+        console.log('fuse lemm persons');
+        console.log(fuseLemmaPer);
+
+        const searchResults = fusePer.search(queryPer);
+        console.log('searchRes');
+        console.log(searchResults);
+        const searchLemmaResults = fuseLemmaPer.search(lemmQueryPer);
+        console.log('search LemRes');
+        console.log(searchLemmaResults);
+
+        const searchResultsItems = searchResults.map(i => i.item)
+        console.log('searchResultsItems');
+        console.log(searchResultsItems);
+        const searchLemmaResultsItems = searchLemmaResults.map(i=> i.item)
+        console.log('searchLemmaResultsItems');
+        console.log(searchLemmaResultsItems);
+
+
+        const uniqueResultsSet = [...new Set(searchResultsItems)];
+        console.log('uniq res');
+        console.log(uniqueResultsSet);
+        const uniqueLemmaResultsSet = [...new Set(searchLemmaResultsItems)];
+        console.log('uniq lemma res');
+        console.log(uniqueLemmaResultsSet);
+
+        uniqueResultsSet.forEach(result => {
+            const dataFromDB = realm.objects('User').filtered('person = $0', result)
+            data.push(...dataFromDB)
+        })
+        uniqueLemmaResultsSet.forEach(result => {
+            const lemmaDataFromDB = realm.objects('User').filtered('lemmaPerson = $0', result)
+            lemmaData.push(...lemmaDataFromDB)
+        })
+
+        console.log('END PER FILTER');
+        console.log(data);
+        console.log('END LEMMAPER FILER');
+        console.log(lemmaData);
+    } else {
+        data.push(realm.objects('User'))
+        lemmaData.push(realm.objects('User'))
+        console.log('END NO PER FILTER');
+        console.log(data);
+        console.log('END NO LEMMAPER FILER');
+        console.log(lemmaData);
+    }
+
+
+    if(TASK) {
+        console.log("filtering TASK")
+        const queryTASK = TASK[0];
+        console.log(`queryTASK = ${queryTASK}`)
+        const lemmQueryTASK = LEMMTASK[0]
+        console.log(`lemmQueryTASK = ${lemmQueryTASK}`)
+
+        const tasks = data.map(item => item.name);
+        const lemmaTasks = lemmaData.map(item => item.lemmaName);
+
+        const options = {
+            includeScore: true,  // Включить оценку схожести
+            threshold: 0.3,      // Порог схожести (меньше - более строгий)
+        };
+        const fusePer = new Fuse(tasks, options)
+        const fuseLemmaPer = new Fuse(lemmaTasks, options)
+
+        const searchResults = fusePer.search(queryTASK);
+        const searchLemmaResults = fuseLemmaPer.search(lemmQueryTASK);
+
+        const uniqueResultsSet = new Set(searchResults);
+        const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+
+        uniqueResultsSet.forEach(result => {
+            const filteredData = data.filter(item => item.name === result.item);
+            data = filteredData;
+        })
+        uniqueLemmaResultsSet.forEach(result => {
+            const filteredLemmData = lemmaData.filter(item => item.lemmaName === result.item);
+            lemmaData = filteredLemmData;
+        })
+
+        console.log('END TASK FILTER');
+        console.log(data);
+        console.log('END LEMMATASK FILER');
+        console.log(lemmaData);
+    } else {
+        console.log('END NO TASK FILTER');
+    }
+
+    if(TIME) {
+        if(CREATE) {
+            console.log("filtering TIME CREATE")
+            const queryTIME = TIME[0];
+            console.log(`queryTIME = ${queryTIME}`)
+            const lemmQueryTIME = LEMMTIME[0]
+            console.log(`lemmQueryTIME = ${lemmQueryTIME}`)
+
+            const times = data.map(item => item.createdAt);
+            const lemmaTimes = lemmaData.map(item => item.lemmaCreatedAt);
+
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(times, options)
+            const fuseLemmaPer = new Fuse(lemmaTimes, options)
+
+            const searchResults = fusePer.search(queryTIME);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryTIME);
+
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.time === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaTime === result.item);
+                lemmaData = filteredLemmData;
+            })
+
+            console.log('END TIME FILTER');
+            console.log(data);
+            console.log('END LEMMATIME FILER');
+            console.log(lemmaData);
+
+        } else {    
+            console.log("filtering TIME CREATE")
+            const queryTIME = TIME[0];
+            console.log(`queryTIME = ${queryTIME}`)
+            const lemmQueryTIME = LEMMTIME[0]
+            console.log(`lemmQueryTIME = ${lemmQueryTIME}`)
+
+            const times = data.map(item => item.time);
+            const lemmaTimes = lemmaData.map(item => item.lemmaTime);
+
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(times, options)
+            const fuseLemmaPer = new Fuse(lemmaTimes, options)
+
+            const searchResults = fusePer.search(queryTIME);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryTIME);
+
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.time === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaTime === result.item);
+                lemmaData = filteredLemmData;
+            })
+
+            console.log('END TIME FILTER');
+            console.log(data);
+            console.log('END LEMMATIME FILER');
+            console.log(lemmaData);
+        }
+    } else {
+        console.log('END NO TIME FILTER');
+    }
+
+
+    if(DATE) {
+
+        if(PREFIX[0]==='через') {
+            console.log("filtering DATE")
+            console.log(typeof DATE[0]);
+            const queryDATE = DATE[0];
+            console.log(`queryDATE = ${queryDATE}`)
+            const lemmQueryDATE = LEMMDATE[0]
+            console.log(`lemmQueryDATE = ${lemmQueryDATE}`)
+        
+            const dates = data.map(item => item.date);
+            const lemmaDates = lemmaData.map(item => item.lemmaDate);
+        
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(dates, options)
+            const fuseLemmaPer = new Fuse(lemmaDates, options)
+        
+            const searchResults = fusePer.search(queryDATE);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryDATE);
+        
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+        
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.date === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaDate === result.item);
+                lemmaData = filteredLemmData;
+            })
+        
+            console.log('END DATE FILTER');
+            console.log(data);
+            console.log('END LEMMADATE FILER');
+            console.log(lemmaData);
+
+            } else if(PREFIX[0]==='следующий'|| PREFIX[0]==='позже') {
+            console.log("filtering DATE")
+            const queryDATE = DATE[0];
+            console.log(`queryDATE = ${queryDATE}`)
+            const lemmQueryDATE = LEMMDATE[0]
+            console.log(`lemmQueryDATE = ${lemmQueryDATE}`)
+        
+            const dates = data.map(item => item.date);
+            const lemmaDates = lemmaData.map(item => item.lemmaDate);
+        
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(dates, options)
+            const fuseLemmaPer = new Fuse(lemmaDates, options)
+        
+            const searchResults = fusePer.search(queryDATE);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryDATE);
+        
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+        
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.date === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaDate === result.item);
+                lemmaData = filteredLemmData;
+            })
+        
+            console.log('END DATE FILTER');
+            console.log(data);
+            console.log('END LEMMADATE FILER');
+            console.log(lemmaData);
+        } else if(PREFIX[0]==='назад'|| PREFIX[0]==='раньше') {
+            console.log("filtering DATE")
+            const queryDATE = DATE[0];
+            console.log(`queryDATE = ${queryDATE}`)
+            const lemmQueryDATE = LEMMDATE[0]
+            console.log(`lemmQueryDATE = ${lemmQueryDATE}`)
+        
+            const dates = data.map(item => item.date);
+            const lemmaDates = lemmaData.map(item => item.lemmaDate);
+        
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(dates, options)
+            const fuseLemmaPer = new Fuse(lemmaDates, options)
+        
+            const searchResults = fusePer.search(queryDATE);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryDATE);
+        
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+        
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.date === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaDate === result.item);
+                lemmaData = filteredLemmData;
+            })
+        
+            console.log('END DATE FILTER');
+            console.log(data);
+            console.log('END LEMMADATE FILER');
+            console.log(lemmaData);
+        } else {
+            console.log("filtering DATE")
+            const queryDATE = DATE[0];
+            console.log(`queryDATE = ${queryDATE}`)
+            const lemmQueryDATE = LEMMDATE[0]
+            console.log(`lemmQueryDATE = ${lemmQueryDATE}`)
+        
+            const dates = data.map(item => item.date);
+            const lemmaDates = lemmaData.map(item => item.lemmaDate);
+        
+            const options = {
+                includeScore: true,  // Включить оценку схожести
+                threshold: 0.3,      // Порог схожести (меньше - более строгий)
+            };
+            const fusePer = new Fuse(dates, options)
+            const fuseLemmaPer = new Fuse(lemmaDates, options)
+        
+            const searchResults = fusePer.search(queryDATE);
+            const searchLemmaResults = fuseLemmaPer.search(lemmQueryDATE);
+        
+            const uniqueResultsSet = new Set(searchResults);
+            const uniqueLemmaResultsSet = new Set(searchLemmaResults);
+        
+            uniqueResultsSet.forEach(result => {
+                const filteredData = data.filter(item => item.date === result.item);
+                data = filteredData;
+            })
+            uniqueLemmaResultsSet.forEach(result => {
+                const filteredLemmData = lemmaData.filter(item => item.lemmaDate === result.item);
+                lemmaData = filteredLemmData;
+            })
+        
+            console.log('END DATE FILTER');
+            console.log(data);
+            console.log('END LEMMADATE FILER');
+            console.log(lemmaData);
+        }
+    } else {
+        console.log('END NO DATE FILTER');
+    }
+
+
+    if(data > lemmaData) {
+        console.log('DATA BOLWE');
+        console.log(data.length);
+        console.log(lemmaData.length);
+        return data
+    } else {
+        console.log('LEMMADATA BOLWE');
+        console.log(lemmaData.length);
+        console.log(data.length);
+        return lemmaData
+    }
+
+}
+
+
+
+export function deleteUserTask(newTask) {
+
+    console.log('UDALENIE V ACTIONS');
+
+    const {DATE,TIME,TASK,PER} = newTask
+    // let name = TASK[0]
+    // let date = DATE[0]
+    // let time = TIME[0]
+    // let person = PER[0]
+
+  const tasksToDelete = realm.objects('User').filtered('name == $0 AND date == $1 AND time == $2 AND person == $3', TASK[0], DATE[0], TIME[0], PER[0]);
+  console.log(tasksToDelete);
+  if (tasksToDelete.length > 0) {
+      realm.write(() => {
+          realm.delete(tasksToDelete);
+      });
+      console.log('Удалено');
+      return 'задание удалено'
+  } else {
+      console.log('Задача не найдена. Не удалось удалить задачу. в ACTIONS');
+      return 'Задача не найдена. Не удалось удалить задачу.'
+  }
+}
+
+
+
+
+
+export function updateTask(newTask) {
+
+    console.log("ACTIONS UPDATING");
+    const {DATE,TIME,TASK,PER} = newTask
+
+    const tasksToUpdate = realm.objects('User').filtered('name == $0 AND date == $1 AND time == $2 AND person == $3', TASK[0], DATE[0], TIME[0], PER[0]);
+
+    const hasDay = ['день'].includes(inputText);
+    const daysMatch = inputText.match(/(\d+)\s+дней?/);
+
+    function calculateFutureDate(days) {
+        const currentDate = new Date();
+        const futureDate = new Date(currentDate);
+        futureDate.setDate(currentDate.getDate() + days);
+        return futureDate.toISOString();
+    }
+
+    function calculatePastDate(days) {
+        const currentDate = new Date();
+        const pastDate = new Date(currentDate);
+        pastDate.setDate(currentDate.getDate() - days);
+        return pastDate.toISOString();
+    }
+
+    const newTime = (taskTime) => (
+        DATE 
+        ?
+            (TIME ? TIME : taskTime)
+        : 
+            (   
+                TIME
+                ?
+                    (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
+                    (['назад', 'раньше'].includes(PREFIX) && '-2') ||
+                    (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
+                    TIME[0]
+                :
+                taskTime
+            )
+    );
+
+    // const newDate = (taskTime) => (
+        
+    //     DATE
+    //     ? 
+    //         (DATE === 'неделя' || DATE === 'месяц')
+    //         ?
+    //             (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
+    //             (['назад', 'раньше'].includes(PREFIX) && '-2') ||
+    //             (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
+    //             DATE[0]
+    //         :
+            
+    //             hasDay
+    //             ?
+    //                 (['назад', 'раньше'].includes(PREFIX) && calculatePastDate(parseInt(daysMatch[0]))) ||
+    //                 calculateFutureDate(parseInt(daysMatch[0]))
+    //             :
+    //                 (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
+    //                 (['назад', 'раньше'].includes(PREFIX) && '-2') ||
+    //                 (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
+    //                 DATE[0]// Вывести false, так как ни количество дней, ни 'день' не найдены
+                
+    //         :
+    //     taskDate
+    // );
+
+    const newDate = (taskTime) => {
+        if (DATE) {
+            if (DATE === 'неделя') {
+                if (['через', 'позже', 'вперед'].includes(PREFIX)) {
+                    return calculateFutureDate(parseInt(7))
+                } else if (['назад', 'раньше'].includes(PREFIX)) {
+                    return calculatePastDate(parseInt(7));
+                } else {
+                    return DATE[0];
+                }
+            } else if (DATE === 'месяц') {
+                if (['через', 'позже', 'вперед'].includes(PREFIX)) {
+                    return calculateFutureDate(31)
+                } else if (['назад', 'раньше'].includes(PREFIX)) {
+                    return '-2';
+                } else {
+                    return DATE[0];
+                }
+            } else {
+                if (hasDay) {
+                    if (['назад', 'раньше'].includes(PREFIX)) {
+                        return calculatePastDate(parseInt(daysMatch[0]));
+                    } else {
+                        return calculateFutureDate(parseInt(daysMatch[0]));
+                    }
+                } else {
+                    if (['через', 'позже', 'вперед'].includes(PREFIX)) {
+                        return '+2';
+                    } else if (['назад', 'раньше'].includes(PREFIX)) {
+                        return '-2';
+                    } else if (['следующий', 'последующий'].includes(PREFIX)) {
+                        return 'right now';
+                    } else {
+                        return DATE[0];
+                    }
+                }
+            }
+        } else {
+            return taskDate;
+        }
+    };
+
+
+      
+    realm.write(() => {
+        // Изменяем свойства объектов, как вам необходимо
+        tasksToUpdate.forEach(task => {
+                task.date = DATE.length > 1 ? DATE[1] : DATE[0]; // замените на новое значение
+                task.time = (TIME.length > 1 && TIME[1] || TIME.length == 1 && TIME[0])
+                task.name = (TASK.length > 1 && TASK[1] || TASK.length == 1 && task.name)
+                task.person = (PER.length > 1 && PER[1] || PER.length == 1 && PER[0])
+                // замените на новое значение
+                // ... другие изменения
+        });
+    });
+
+    return 'задание обновлено'
+}
+
+export function whoCreated(newTask) {
+    const foundedTasks = getTasks(newTask)
+    const answer = foundedTasks.map(i=> {return {created: i.createdAt, updated: i.updatedAt, creator: 'вы'}})
+    return answer
+}
+
+export function deleteAllUsers() {
+  realm.write(() => {
+    const allUsers = realm.objects('User');
+    realm.delete(allUsers)
+  });
+}
+
+export function moveTask(newTask) {
+
+    const {DATE,TIME,TASK,PER} = newTask
+
+    const tasksToMove = realm.objects('User').filtered('name == $0 AND date == $1 AND time == $2 AND person == $3', TASK[0], DATE[0], TIME[0], PER[0]);
+
+    if (tasksToMove.length > 0) {
+
+        if(PER.length === 0 ){
+            if (PREFIX[0]==='через' || PREFIX[0]==='позже' || PREFIX[0]==='вперед') {
+                tasksToMove.map((i)=>{
+                    realm.write(() => {
+                        if (DATE.length > 1 && TIME.length > 1) {
+                            console.log('BOTH');
+                            console.log(DATE[1]);
+                            i.date = DATE[1] + 2;
+                            i.time = TIME[1];
+                        } else if (DATE.length > 0 && TIME.length < 1) {
+                            i.date = DATE[1] + 2;
+                            i.time = TIME[0];
+                        } else if (DATE.length < 1 && TIME.length > 0) {
+                            i.date = TIME[1] + 2;
+                            i.time = DATE[0];
+                        } else {
+                            i.date = DATE[0];
+                            i.time = TIME[0];
+                        }
+                
+                        // i.PER = PER;
+                    });
+                })
+            } else if (PREFIX[0]==='раньше' || PREFIX[0]==='назад' || PREFIX[0]==='вперед') {
+                tasksToMove.map((i)=>{
+                    realm.write(() => {
+                        if (DATE.length > 1 && TIME.length > 1) {
+                            console.log('BOTH');
+                            console.log(DATE[1]);
+                            i.date = DATE[1] - 2;
+                            i.time = TIME[1];
+                        } else if (DATE.length > 0 && TIME.length < 1) {
+                            i.date = DATE[1] - 2;
+                            i.time = TIME[0];
+                        } else if (DATE.length < 1 && TIME.length > 0) {
+                            i.date = TIME[1] - 2;
+                            i.time = DATE[0];
+                        } else {
+                            i.date = DATE[0];
+                            i.time = TIME[0];
+                        }
+                
+                        // i.PER = PER;
+                    });
+                })
+            } else {
+                tasksToMove.map((i)=>{
+                    realm.write(() => {
+                        if (DATE.length > 1 && TIME.length > 1) {
+                            console.log('BOTH');
+                            console.log(DATE[1]);
+                            i.date = DATE[1] + 2;
+                            i.time = TIME[1];
+                        } else if (DATE.length > 0 && TIME.length < 1) {
+                            i.date = DATE[1] + 2;
+                            i.time = TIME[0];
+                        } else if (DATE.length < 1 && TIME.length > 0) {
+                            i.date = TIME[1] + 2;
+                            i.time = DATE[0];
+                        } else {
+                            i.date = DATE[0];
+                            i.time = TIME[0];
+                        }
+                
+                        // i.PER = PER;
+                    });
+                })
+            }
+        } else {
+
+            tasksToMove.map((i)=>{
+                realm.write(() => {
+                    if (DATE.length > 1 && TIME.length > 1) {
+                        console.log('BOTH')
+                        console.log(DATE[1])
+                        i.date = DATE[1]
+                        i.time = TIME[1]
+                        i.person = 'я'
+                    } else if (DATE.length > 1 && TIME.length === 1) {
+                        i.date = DATE[1]
+                        i.time = TIME[0]
+                        i.person = 'я'
+                    } else if (DATE.length === 1 && TIME.length > 1) {
+                        i.date = TIME[1]
+                        i.time = DATE[0]
+                        i.person = 'я'
+                    } else {
+                        i.date = DATE[0]
+                        i.time = TIME[0]
+                        i.person = 'я'
+                    }
+                    // i.PER = PER;
+                });
+            })
+        }
+
+
+
+        console.log('pereneseno v ACTIONS')
+        return 'перенесено'
+
+} else {
+    return 'Задача не найдена. Не удалось перенести задачу.'
+}
+
+}
+
+
+// if (DATE === 'неделя') {
+//     if (['через', 'позже', 'вперед', 'следующий'].includes(PREFIX)) {
+//         return calculateFutureDate(parseInt(7))
+//     } else {
+//         return DATE[0];
+//     }
+// } else if (DATE === 'месяц') {
+//     if (['через', 'позже', 'вперед'].includes(PREFIX)) {
+//         const now = new Date();
+//         now.setMonth(now.getMonth() + 1);
+//         const dnow = now.toISOString();
+//         console.log(dnow);
+        
+//         return calculateFutureDate(31)
+//     } else {
+//         return DATE[0];
+//     }
+// }else if (DATE === 'год') {
+//     if (['через', 'позже', 'вперед'].includes(PREFIX)) {
+//         const now = new Date();
+//         now.setFullYear(now.getFullYear() + 1);
+//         return now.toISOString();
+//     } else {
+//         return DATE[0];
+//     }
+// } else {
+
+import {calculateFutureMinutes, calculatePastMinutes, 
+    calculateFutureHours, calculatePastHours,
+    calculateFutureDates, calculatePastDates,
+    calculateFutureDateWeeks, calculatePastDateWeeks,
+    calculateFutureDateMonths, calculatePastDateMonths,
+    calculateFutureDateYears, calculatePastDateYears } from './Calculators';
+
+export const newDateFutureParser = (DATE: string, PREFIX: string, hasDay: boolean, hasWeek: boolean, hasMonth: boolean, hasYear: boolean, ): Date => {
+        console.log(13);
+        
+        const match = (i: string) => i.match(/\d+/);
+        const firstNumber = (match: RegExpMatchArray | null) => (match ? parseInt(match[0]) : 0)
+        if (DATE) {
+            const dateString: string = DATE[0];
+            console.log(1232);
+            console.log(DATE[0]);
+            
+            console.log(dateString);
+            
+            const dateParts = dateString.split(/[-T:.Z]/).map(parseFloat);
+
+            let years = dateParts[0] // Год
+            console.log(years);
+            let monthes = dateParts[1]  // Месяц (нумерация месяцев начинается с 0)
+            console.log(monthes);
+            let days = dateParts[2] // День
+            console.log(days);
+            let hours = dateParts[3]+3 // Час
+            console.log(hours);
+            let min = dateParts[4] // Минуты
+            console.log(min);
+            let sec = dateParts[5] // Секунды
+            console.log(sec);
+
+            const futureTimeEarly = new Date(Date.UTC(
+                dateParts[0], // Год
+                dateParts[1], // Месяц (нумерация месяцев начинается с 0)
+                dateParts[2], // День
+                dateParts[3]+3, // Час
+                dateParts[4], // Минуты
+                dateParts[5] // Секунды
+            ));
+
+            console.log(futureTimeEarly);
+            console.log('FUTURETIME1 ' + futureTimeEarly );
+            
+            
+
+            if (hasDay) { // 2 дня
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть дни и есть префикс вперед ');
+                    console.log(DATE);
+        
+                    console.log(firstNumber(match(DATE)));
+                    
+                    const additionalDays = firstNumber(match(DATE)) >= 1 ? firstNumber(match(DATE))  : firstNumber(match(DATE)) + 1
+                    days = days + additionalDays
+                    console.log('Actions есть дни и есть префикс вперед вывод:');
+                    console.log(additionalDays);
+                    console.log(typeof additionalDays);
+                } else {
+                    console.log('Actions есть дни и нет префикс вперед ');
+                    const additionalDays = firstNumber(match(DATE));
+                    days = days + additionalDays
+                    console.log('Actions есть дни и нет префикс вперед вывод:');
+                    console.log(additionalDays);
+                    console.log(typeof additionalDays);
+                } 
+            } 
+            if (hasWeek) { // 2 недели
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть недели и есть префикс вперед ');
+                    const additionalWeeks = firstNumber(match(DATE)) >= 1 ? firstNumber(match(DATE))  : firstNumber(match(DATE)) + 1
+                    days = additionalWeeks*7 + days
+                    console.log('Actions есть недели и есть префикс вперед вывод:');
+                    console.log(additionalWeeks*7);
+                    console.log(typeof additionalWeeks);
+                } else {
+                    console.log('Actions есть недели и нет префикс вперед ');
+                    const additionalWeeks = firstNumber(match(DATE));
+                    days = additionalWeeks*7 + days
+                    console.log('Actions есть недели и нет префикс вперед вывод:');
+                    console.log(additionalWeeks*7);
+                    console.log(typeof additionalWeeks);
+                } 
+            }
+            if (hasMonth) { // 2 месяца
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть месяцы и есть префикс вперед ');
+                    const additionalMonthes = firstNumber(match(DATE)) >= 1 ? firstNumber(match(DATE))  : firstNumber(match(DATE)) + 1
+                    monthes = monthes + additionalMonthes 
+                    console.log('Actions есть месяцы и есть префикс вперед вывод:');
+                    console.log(additionalMonthes);
+                    console.log(typeof additionalMonthes);
+                } else {
+                    console.log('Actions есть месяцы и нет префикс вперед ');
+                    const additionalMonthes = firstNumber(match(DATE));
+                    monthes = monthes + additionalMonthes 
+                    console.log('Actions есть месяцы и нет префикс вперед вывод:');
+                    console.log(additionalMonthes);
+                    console.log(typeof additionalMonthes);
+                } 
+            } 
+            if (hasYear) { // 2 года
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть годы и есть префикс вперед ');
+                    const additionalYears = firstNumber(match(DATE)) >= 1 ? firstNumber(match(DATE))  : firstNumber(match(DATE)) + 1
+                    years = years + additionalYears 
+                    console.log('Actions есть годы и есть префикс вперед вывод:');
+                    console.log(additionalYears);
+                    console.log(typeof additionalYears);
+                } else {
+                    console.log('Actions есть годы и нет префикс вперед ');
+                    const additionalYears = firstNumber(match(DATE));
+                    years = years + additionalYears 
+                    console.log('Actions есть годы и нет префикс вперед вывод:');
+                    console.log(additionalYears);
+                    console.log(typeof additionalYears);
+                } 
+            }
+
+            const futureTime = new Date(Date.UTC(
+                years, // Год
+                monthes, // Месяц (нумерация месяцев начинается с 0)
+                days, // День
+                hours, // Час
+                min, // Минуты
+                sec // Секунды
+            ));
+
+            console.log(futureTime);
+            console.log('FUTURETIME1 ' + futureTime );
+            
+
+
+            return futureTime
+        } else {
+            return new Date()
+        }
+    };
+
+
+
+import {calculateFutureMinutes, calculatePastMinutes, 
+    calculateFutureHours, calculatePastHours,
+    calculateFutureDates, calculatePastDates,
+    calculateFutureDateWeeks, calculatePastDateWeeks,
+    calculateFutureDateMonths, calculatePastDateMonths,
+    calculateFutureDateYears, calculatePastDateYears } from './Calculators';
+
+
+
+const TimeArrayOne = ['завтра', 'послезавтра', 'понедельник', 'вторник', 'среда', 
+                      'четверг', 'пятница', 'суббота', 'воскресенье',  'январь', 'февраль', 
+                      'март', 'апрель', 'май', 'июнь','июль', 'август', 'сентябрь', 'октябрь', 
+                      'ноябрь', 'декабрь','следующий' ]
+                
+
+
+
+export const newTimeFutureParser = (TIME: string, DATE:string, LEMMDATE:string, PREFIX:string, hasHour: boolean, hasMinute: boolean): Date => {
+
+
+    const match = (i: string) => i.match(/\d+/);
+    const firstNumber = (match: RegExpMatchArray | null) => (match ? parseInt(match[0]) : 0)
+    const timeMatch = (i: string): RegExpMatchArray | null => i.match(/(\d{2})\s*:\s*(\d{2})/);
+
+    console.log('TIME in TIME');
+    console.log(TIME[0]);
+    console.log('DATE in TIME');
+    console.log(DATE[0]);
+    console.log(typeof DATE);
+    console.log('LEMMDATE in TIME');
+    console.log(LEMMDATE[0]);
+    console.log(typeof LEMMDATE[0]);
+    console.log('PREFIX in TIME');
+    console.log(PREFIX[0]);
+    console.log('hasHour in TIME');
+    console.log(hasHour);  
+    console.log('hasMinute in TIME');
+    console.log(hasMinute);    
+
+    let bool = TimeArrayOne.some(word => LEMMDATE[0].includes(word))
+    console.log(bool);
+         
+
+    if (TIME && !DATE || TIME && bool) {
+        console.log(1);
+            if (hasMinute) { // 20 минут
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть минуты и есть префикс вперед');
+                    const futureTime = calculateFutureMinutes(firstNumber(match(TIME[0])), new Date())
+                    console.log('Actions есть минуты и есть префикс вперед вывод:');
+                    console.log(futureTime);
+                    console.log(typeof futureTime);
+                    return futureTime
+                } else {
+                    console.log('Actions есть минуты но нет префикса вперед');
+                    const currentDate = new Date();
+                    const desiredMinutes = firstNumber(match(TIME[0]));
+                    // Добавляем часы и минуты к дате
+                    currentDate.setMinutes(desiredMinutes);
+                    const futureTime = new Date(Date.UTC(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth(),
+                        currentDate.getDate(),
+                        currentDate.getHours(),
+                        desiredMinutes,
+                        currentDate.getSeconds()
+                    )); 
+                    console.log('Минуты установлены');
+                    console.log('Actions есть часы но нет префикса вперед вывод:');
+                    console.log(futureTime);
+                    console.log(typeof futureTime);
+                    return futureTime
+                } 
+            } else if (hasHour) { // 20 часов
+                if (['через', 'позже', 'вперед','следующий'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Actions есть часы и есть префикс вперед');
+                    const futureTime = calculateFutureHours(firstNumber(match(TIME[0])), new Date())
+                    console.log('Actions есть часы и есть префикс вперед вывод:');
+                    console.log(futureTime);
+                    console.log(typeof futureTime);
+                    return futureTime
+                } else {
+                    console.log('Actions есть часы но нет префикса');
+                    const currentDate = new Date();
+                    const desiredHours = firstNumber(match(TIME[0]));
+                    // Добавляем часы и минуты к дате
+                    const futureTime = new Date(Date.UTC(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth(),
+                        currentDate.getDate(),
+                        desiredHours,
+                        currentDate.getMinutes(),
+                        currentDate.getSeconds()
+                    )); 
+                    console.log('Часы установлены');
+                    console.log('Actions есть часы но нет префикса вывод:');
+                    console.log(futureTime);
+                    console.log(typeof futureTime);
+                    return futureTime
+                } 
+            } else {
+                
+                if (['через', 'позже', 'вперед'].some(word => PREFIX[0].includes(word))) {
+                    console.log('Завтра через 17 : 00');
+                    console.log('Actions нет часов нет минут но есть префикс вперед.');
+                    const currentDate = new Date();
+
+                    const timeMatchResult = timeMatch(TIME[0]);
+
+                    const desiredMinutes = timeMatchResult ? timeMatchResult[2] : '1';
+                    const desiredHours = timeMatchResult ? timeMatchResult[1] : '0';
+
+                    // Добавляем часы и минуты к дате
+                    const minutesToAdd = currentDate.getMinutes() + desiredMinutes 
+                    const hoursToAdd = currentDate.getHours() + desiredHours;
+
+                    const futureTime = new Date(Date.UTC(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth(),
+                        currentDate.getDate(),
+                        parseInt(hoursToAdd),
+                        parseInt(minutesToAdd),
+                        currentDate.getSeconds()
+                      ));
+
+                      console.log('Actions нет часов нет минут но есть префикс вывод:');
+                      console.log(futureTime);
+                      console.log(typeof futureTime);      
+                      return futureTime   
+
+                    // return initialDate
+                    
+                } else {
+                    console.log('Actions нет часов нет минут нет префикса');
+                    const currentDate = new Date();  // Сначала создайте объект currentDate
+
+                    const timeMatchResult = timeMatch(TIME[0]);
+
+                    const desiredMinutes = timeMatchResult ? timeMatchResult[2] : '1';
+                    const desiredHours = timeMatchResult ? timeMatchResult[1] : '0';
+
+                    const futureTime = new Date(Date.UTC(
+                        currentDate.getFullYear(),
+                        currentDate.getMonth(),
+                        currentDate.getDate(),
+                        parseInt(desiredHours),
+                        parseInt(desiredMinutes),
+                        currentDate.getSeconds()
+                      ));
+    
+                    console.log('Actions нет часов нет минут нет префикса вывод:');
+                    console.log(futureTime);
+                    console.log(typeof futureTime);
+
+                    return futureTime
+                }
+            }
+    } else if (!TIME) {
+        console.log('Actions NewTask !TIME');
+        
+        const currentDate = new Date();
+        
+        const futureTime = new Date(Date.UTC(
+                currentDate.getFullYear(),
+                currentDate.getMonth(),
+                currentDate.getDate(),
+                currentDate.getHours() + 1,
+                currentDate.getMinutes() + 30,
+                currentDate.getSeconds()
+            )); 
+
+        console.log('Actions NewTask !TIME вывод:');    
+        console.log(futureTime);
+        console.log(typeof futureTime);
+            
+        return futureTime
+    } else {
+        console.log('Actions NewTask есть время есть дата и дата не из массива')           
+        const currentDate = new Date();
+
+        console.log(currentDate);
+        const timeMatchResult = timeMatch(TIME[0]);
+        console.log(timeMatchResult);
+
+        const desiredMinutes = timeMatchResult ? timeMatchResult[2] : '1';
+        const desiredHours = timeMatchResult ? timeMatchResult[1] : '0';
+
+        console.log(123);
+        console.log(desiredHours);
+        console.log(desiredMinutes);
+        console.log(currentDate);
+
+        const futureTime = new Date(Date.UTC(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            currentDate.getDate(),
+            parseInt(desiredHours),
+            parseInt(desiredMinutes),
+            currentDate.getSeconds()
+        )); 
+        console.log('parsedData');
+        console.log('Actions NewTask есть время есть дата и дата не из массива вывод:') 
+        console.log(futureTime);
+        console.log(typeof futureTime);
+        
+        return futureTime
+    }    
+};
+
+export function calculateFutureMinutes(minutes: number, initialDate: Date): Date {
+
+    const currentTime = new Date(initialDate);
+
+    const futureTime = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes() + minutes,
+        currentTime.getSeconds()
+    )); 
+    console.log('Минуты прибавлены');
+    console.log(futureTime);
+
+    return futureTime;
+}
+
+export function calculateFutureHours(hours: number, initialDate: Date): Date {
+
+    const currentTime = new Date(initialDate);
+
+
+    const futureTime = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours() + hours,
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    )); 
+    console.log('Часы прибавлены');
+    console.log(futureTime);
+    
+    return futureTime;
+}
+
+export function calculateFutureDates(days: number, initialDate: Date): Date {
+    const currentDate = new Date(initialDate);
+
+
+    const futureDate = new Date(Date.UTC(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate() + days,
+        currentDate.getHours(),
+        currentDate.getMinutes(),
+        currentDate.getSeconds()
+    )); 
+    console.log('Дни прибавлены');
+    
+    console.log(futureDate);
+    
+    return futureDate;
+}
+
+export function calculateFutureDateWeeks(weeks: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const futureDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate() + weeks * 7,
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Недели прибавлены');
+    console.log(futureDate);
+    return futureDate;
+}
+
+export function calculateFutureDateMonths(months: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const futureDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth() + months,
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Месяцы прибавлены');
+    console.log(futureDate);
+    return futureDate;
+}
+
+export function calculateFutureDateYears(years: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const futureDate = new Date(Date.UTC(
+        currentTime.getFullYear() + years,
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Годы прибавлены');
+    console.log(futureDate);
+    return futureDate;
+}
+
+export function calculatePastMinutes(minutes: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes() - minutes,
+        currentTime.getSeconds()
+    ));
+    console.log('Минуты вычтены');
+    console.log(pastDate);
+    return pastDate;
+}
+
+export function calculatePastHours(hours: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours() - hours,
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Часы вычтены');
+    console.log(pastDate);
+    return pastDate;
+}
+
+export function calculatePastDates(days: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate() - days,
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Дни вычтены');
+    console.log(pastDate);
+    return pastDate;
+}
+
+export function calculatePastDateWeeks(weeks: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate() - weeks * 7,
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Недели вычтены');
+    console.log(pastDate);
+    return pastDate;
+}
+
+export function calculatePastDateMonths(months: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear(),
+        currentTime.getMonth() - months,
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Месяцы вычтены');
+    console.log(pastDate);
+    return pastDate;
+}
+
+export function calculatePastDateYears(years: number, initialDate: Date): Date {
+    const currentTime = new Date(initialDate);
+    const pastDate = new Date(Date.UTC(
+        currentTime.getFullYear() - years,
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        currentTime.getHours(),
+        currentTime.getMinutes(),
+        currentTime.getSeconds()
+    ));
+    console.log('Годы вычтены');
+    console.log(pastDate);
+    return pastDate;
 }
 
