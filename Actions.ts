@@ -4,43 +4,39 @@ import Realm from 'realm';
 import {User, Task} from './UserModel';
 import Fuse from 'fuse.js'
 
-import { newTimeFutureParser } from './TimeParsers';
-import { newDateFutureParser } from './DateParsers';
-import { iData, iIncomeComandInterface, iTask } from './Interfaces';
+import { newTimeFutureParser, newTimeFuturePastParser } from './TimeParsers';
+import { newDateFutureParser, newDateFuturePastParser } from './DateParsers';
+import { iData, iIncomeComandInterface, iTask, iIncomeCreateTasksCommand, iIncomeUpdateTasksCommand } from './Interfaces';
 
 const realmConfig = {
   schema: [User, Task],
 };
 const realm = new Realm(realmConfig);
 
-const TimeArrayOne = ['завтра', 'послезавтра', 'понедельник', 'вторник', 'среда', 
-                      'четверг', 'пятница', 'суббота', 'воскресенье',  'январь', 'февраль', 
-                      'март', 'апрель', 'май', 'июнь','июль', 'август', 'сентябрь', 'октябрь', 
-                      'ноябрь', 'декабрь','следующий' ]
-
-export function createUserTask(newTask: iIncomeComandInterface) {
+export function createUserTask(newTask: iIncomeCreateTasksCommand) {
 
     console.log(213123)
     console.log(newTask);
+    const todayDate = new Date()
 
     const {ACT,DATE,TIME,TASK,PER,LEMMACT,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER,PREFIX,LEMMPREFIX} = newTask
 
-    let inputTime = LEMMTIME[0]
-    let inputHours = LEMMDATE[0]
+    let inputTime = LEMMTIME ? LEMMTIME[0] : 'no'
+    let lemmInputDays = LEMMDATE ? LEMMDATE[0] : 'no'
     const hasHour = ['час', 'часы'].some(word => inputTime.includes(word));
     const hasMinute = ['минута', 'минуты'].some(word => inputTime.includes(word));
-    const hasDay = ['день', 'дни'].some(word => inputHours.includes(word));
-    const hasWeek = ['неделя', 'недели'].some(word => inputHours.includes(word));
-    const hasMonth = ['месяц', 'месяцы'].some(word => inputHours.includes(word));
-    const hasYear = ['год', 'лет'].some(word => inputHours.includes(word));
+    const hasDay = ['день', 'дни'].some(word => lemmInputDays.includes(word));
+    const hasWeek = ['неделя', 'недели'].some(word => lemmInputDays.includes(word));
+    const hasMonth = ['месяц', 'месяцы'].some(word => lemmInputDays.includes(word));
+    const hasYear = ['год', 'лет'].some(word => lemmInputDays.includes(word));
 
 
 
-    const newDateFuture = newDateFutureParser(DATE[0], LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear)
+    const newDateFuture = newDateFutureParser(DATE ? DATE[0] : todayDate.toISOString(), LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear)
     console.log('DATE');
     console.log(newDateFuture);
     
-    const newTimeFuture = newTimeFutureParser(LEMMTIME, newDateFuture, LEMMDATE, LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasHour, hasMinute)
+    const newTimeFuture = newTimeFutureParser(LEMMTIME ? LEMMTIME[0] : null, newDateFuture, LEMMDATE ? LEMMDATE[0] : lemmInputDays, LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasHour, hasMinute)
 
     console.log('TIME');
     console.log(newTimeFuture);
@@ -66,13 +62,13 @@ export function createUserTask(newTask: iIncomeComandInterface) {
         const formedTask = {
             id: newId,
             name: newTask.TASK[0],
-            person: newTask.PER[0],
+            person: newTask.TASK ? newTask.TASK[0] : 'я',
             date: newTimeFuture,
             time: newTimeFuture,
             lemmaName: newTask.LEMMTASK[0],
-            lemmaPerson: newTask.LEMMPER[0],
-            lemmaDate: newTask.LEMMDATE[0],
-            lemmaTime: newTask.LEMMTIME[0],
+            lemmaPerson: newTask.TASK ? newTask.TASK[0] : 'я',
+            lemmaDate: newTimeFuture,
+            lemmaTime: newTimeFuture,
             tasks: fakeTasks
         }
 
@@ -92,8 +88,10 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
     const {DATE,TIME,TASK,PER,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER, CREATE,PREFIX,LEMMPREFIX} = newTask
     console.log(234234);
     
-    let inputTime = LEMMTIME[0]
-    let inputHours = LEMMDATE[0]
+    let inputTime = LEMMTIME ? LEMMTIME[0] : 'no'
+    let inputHours = LEMMDATE ? LEMMDATE[0] : 'no'
+
+
     const hasHour = ['час', 'часы'].some(word => inputTime.includes(word));
     const hasMinute = ['минута', 'минуты'].some(word => inputTime.includes(word));
     const hasDay = ['день', 'дни'].some(word => inputHours.includes(word));
@@ -101,22 +99,13 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
     const hasMonth = ['месяц', 'месяцы'].some(word => inputHours.includes(word));
     const hasYear = ['год', 'лет'].some(word => inputHours.includes(word));
 
-    const newDateFuture = newDateFutureParser(DATE[0], LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear)
-    console.log('DATE');
-    console.log(newDateFuture);
-    
-    const newTimeFuture = newTimeFutureParser(LEMMTIME, newDateFuture, LEMMDATE, LEMMPREFIX ? LEMMPREFIX : 'нет префикса', hasHour, hasMinute)
-
-    console.log('TIME');
-    console.log(newTimeFuture);
-    console.log('TIME2');
-    console.log(typeof newTimeFuture);
-    
-    console.log(newDateFuture);
 
 
     let data: iData[] = []
     let lemmaData: iData[] = []
+
+    let filteredData: iData[] = []
+    let filteredLemmaData: iData[] = []
 
     const tasksFromDB: Array<iData> = Array.from(realm.objects('User'));
 
@@ -129,7 +118,7 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
         console.log("filtering PER")
         const queryPer = PER[0];
         console.log(`queryPer = ${queryPer}`)
-        const lemmQueryPer = LEMMPER[0]
+        const lemmQueryPer = LEMMPER ? LEMMPER[0] : PER[0]
         console.log(`lemmQueryPer = ${lemmQueryPer}`)
 
         const persons = tasksFromDB.map(item => item.person);
@@ -194,8 +183,8 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
             )
         })
     
-        data = newDataForPer
-        lemmaData = newLemmaDataForPer
+        filteredData = newDataForPer
+        filteredLemmaData = newLemmaDataForPer
 
 
         console.log('END PER FILTER');
@@ -216,7 +205,7 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
         console.log("filtering TASK")
         const queryTASK = TASK[0];
         console.log(`queryTASK = ${queryTASK}`)
-        const lemmQueryTASK = LEMMTASK[0]
+        const lemmQueryTASK = LEMMTASK ? LEMMTASK[0] : TASK[0]
         console.log(`lemmQueryTASK = ${lemmQueryTASK}`)
 
         const tasks = data.map(item => item.name);
@@ -271,8 +260,8 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
             )
         })
 
-        data = newDataForPer
-        lemmaData = newLemmaDataForPer
+        filteredData = newDataForPer
+        filteredLemmaData = newLemmaDataForPer
 
         console.log('END TASK FILTER');
         console.log(data);
@@ -283,15 +272,18 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
     }
 
     if(TIME) {
+        const today = new Date()
+        const newTimeFuture = newTimeFutureParser(LEMMTIME ? LEMMTIME[0] : null, DATE ? DATE[0] : today.toISOString(), LEMMDATE ? LEMMDATE[0] : 'no', LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasHour, hasMinute)
+
         if(CREATE) {
             console.log("filtering TIME CREATE")
 
-            const newTimes: Array<iData> = data.filter(i => i.createdAt.includes(newTimeFuture.substring(0, 13)));
-            const newTimesLemma: Array<iData> = lemmaData.filter(i => i.createdAt.includes(newTimeFuture.substring(0, 13)));
+            const newTimes: Array<iData> = data.filter(i => i.createdAt.includes(newTimeFuture.substring(9, 13)));
+            const newTimesLemma: Array<iData> = lemmaData.filter(i => i.createdAt.includes(newTimeFuture.substring(9, 13)));
 
 
-            data = newTimes
-            lemmaData = newTimesLemma
+            filteredData = newTimes
+            filteredLemmaData = newTimesLemma
 
             console.log('END TIME FILTER');
             console.log(data);
@@ -301,11 +293,11 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
         } else {    
             console.log("filtering TIME NOT CREATE")
 
-            const newTimes: Array<iData> = data.filter(i => i.time.includes(newTimeFuture.substring(0, 13)));
-            const newTimesLemma: Array<iData> = lemmaData.filter(i => i.time.includes(newTimeFuture.substring(0, 13)));
+            const newTimes: Array<iData> = data.filter(i => i.time.includes(newTimeFuture.substring(9, 13)));
+            const newTimesLemma: Array<iData> = lemmaData.filter(i => i.time.includes(newTimeFuture.substring(9, 13)));
 
-            data = newTimes
-            lemmaData = newTimesLemma
+            filteredData = newTimes
+            filteredLemmaData = newTimesLemma
 
             console.log('END TIME FILTER');
             console.log(data);
@@ -317,12 +309,18 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
     }
 
 
-        if(DATE) {
+    if(LEMMDATE) {
+            const initialDate = DATE ? DATE : LEMMDATE
+            
+            const newDateFuture = newDateFutureParser(initialDate[0], LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear)
+           
+
+            const LEMMAPREFIX = LEMMPREFIX ? LEMMPREFIX[0] : 'no'
 
             if (LEMMDATE.includes('неделя')) {
-                const initialDate = parseISO(newTimeFuture);
+                const initialDate = parseISO(newDateFuture);
                 const today = new Date();
-                const startWeekDate = ['следующие', 'ближайшие'].some(substring => LEMMPREFIX.includes(substring))
+                const startWeekDate = ['следующие', 'ближайшие'].some(substring => LEMMAPREFIX.includes(substring))
                     ? today
                     : startOfISOWeek(initialDate);
                 const endWeekDate = endOfISOWeek(initialDate);
@@ -339,15 +337,15 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
                 const newTimesLemma: Array<iData> = lemmaData.filter((i: iData) =>  
                     IsoDaysInRange.some((d: string) => CREATE ? i.createdAt.includes(d.substring(0, 10)) : i.time.includes(d.substring(0, 10)))
                 );
-                data = newTimes
-                lemmaData = newTimesLemma
+                filteredData = newTimes
+                filteredLemmaData = newTimesLemma
 
                 console.log('nEWTIMES NEDELYA');
                 console.log(newTimes);
             } else if (LEMMDATE.includes('месяц')) {
-                const initialDate = parseISO(newTimeFuture);
+                const initialDate = parseISO(newDateFuture);
                 const today = new Date();
-                const startMonthDate = ['следующие', 'ближайшие'].some(substring => LEMMPREFIX.includes(substring))
+                const startMonthDate = ['следующие', 'ближайшие'].some(substring => LEMMAPREFIX.includes(substring))
                     ? today
                     : startOfMonth(initialDate);
                 const endMonthDate = endOfMonth(initialDate);
@@ -362,15 +360,15 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
                 const newTimesLemma: Array<iData> = lemmaData.filter((i: iData) =>  
                     IsoDaysInRange.some((d: string) => CREATE ? i.createdAt.includes(d.substring(0, 10)) : i.time.includes(d.substring(0, 10)))
                 );
-                data = newTimes
-                lemmaData = newTimesLemma
+                filteredData = newTimes
+                filteredLemmaData = newTimesLemma
             
                 console.log('newTimes Месяц');
                 console.log(newTimes);
             } else if (LEMMDATE.includes('год')) {
-                const initialDate = parseISO(newTimeFuture);
+                const initialDate = parseISO(newDateFuture);
                 const today = new Date();
-                const startYearDate = ['следующие', 'ближайшие'].some(substring => LEMMPREFIX.includes(substring))
+                const startYearDate = ['следующие', 'ближайшие'].some(substring => LEMMAPREFIX.includes(substring))
                     ? today
                     : startOfYear(initialDate);
                 const endYearDate = endOfYear(initialDate);
@@ -388,54 +386,54 @@ export function getTasks(newTask: iIncomeComandInterface): Array<iData> {
                 const newTimesLemma: Array<iData> = lemmaData.filter((i: iData) =>  
                     IsoDaysInRange.some((d: string) => CREATE ? i.createdAt.includes(d.substring(0, 10)) : i.time.includes(d.substring(0, 10)))
                 );
-                data = newTimes
-                lemmaData = newTimesLemma
+                filteredData = newTimes
+                filteredLemmaData = newTimesLemma
 
                 console.log('NewTimes Год');
                 console.log(newTimes);
             } else {
                 console.log('NewTimes на дату');
                 
-                const newTimes: Array<iData> = data.filter(i => CREATE ? i.createdAt.includes(newTimeFuture.substring(0, 10)) : i.time.includes(newDateFuture.substring(0, 10)));
-                const newTimesLemma: Array<iData> = lemmaData.filter(i => CREATE ? i.createdAt.includes(newTimeFuture.substring(0, 10)) : i.time.includes(newDateFuture.substring(0, 10)));
+                const newTimes: Array<iData> = data.filter(i => CREATE ? i.createdAt.includes(newDateFuture.substring(0, 10)) : i.time.includes(newDateFuture.substring(0, 10)));
+                const newTimesLemma: Array<iData> = lemmaData.filter(i => CREATE ? i.createdAt.includes(newDateFuture.substring(0, 10)) : i.time.includes(newDateFuture.substring(0, 10)));
 
 
-                data = newTimes
-                lemmaData = newTimesLemma
+                filteredData = newTimes
+                filteredLemmaData = newTimesLemma
             }
 
             console.log('END DATE FILTER');
-            console.log(data);
+            console.log(filteredData);
             console.log('END LEMMADATE FILER');
             console.log(lemmaData);
 
-        }  else {
-            console.log("filtering !DATE")
-            console.log('NewTimes нет дату');
-            const InitialDate = new Date()
+    }  else {
+            // console.log("filtering !DATE")
+            // console.log('NewTimes нет дату');
+            // const InitialDate = new Date()
                 
-            const newTimes: Array<iData> = data.filter(i => CREATE ? i.createdAt.includes(InitialDate.toISOString().substring(0, 10)) : i.time.includes(InitialDate.toISOString().substring(0, 10)));
-            const newTimesLemma: Array<iData> = lemmaData.filter(i => CREATE ? i.createdAt.includes(InitialDate.toISOString().substring(0, 10)) : i.time.includes(InitialDate.toISOString().substring(0, 10)));
+            // const newTimes: Array<iData> = data.filter(i => CREATE ? i.createdAt.includes(InitialDate.toISOString().substring(0, 10)) : i.time.includes(InitialDate.toISOString().substring(0, 10)));
+            // const newTimesLemma: Array<iData> = lemmaData.filter(i => CREATE ? i.createdAt.includes(InitialDate.toISOString().substring(0, 10)) : i.time.includes(InitialDate.toISOString().substring(0, 10)));
 
-            data = newTimes
-            lemmaData = newTimesLemma
+            // data = newTimes
+            // lemmaData = newTimesLemma
             console.log('END DATE FILTER');
             console.log(data);
             console.log('END LEMMADATE FILER');
             console.log(lemmaData);
-        }
+    }
 
-        if(data > lemmaData) {
+    if(filteredData > filteredLemmaData) {
             console.log('DATA BOLWE');
             console.log(data.length);
             console.log(lemmaData.length);
-            return data
-        } else {
+            return filteredData
+    } else {
             console.log('LEMMADATA BOLWE');
             console.log(lemmaData.length);
             console.log(data.length);
-            return lemmaData
-        }
+            return filteredLemmaData
+    }
 
 }
 
@@ -462,139 +460,57 @@ export function deleteUserTask(newTask: iIncomeComandInterface) {
 
 
 
-
-
-export function updateTask(newTask) {
+export function updateTask(newTask: iIncomeUpdateTasksCommand) {
 
     console.log("ACTIONS UPDATING");
-    const {DATE,TIME,TASK,PER} = newTask
+ 
+    const {ACT,DATE,TIME,TASK,PER,LEMMACT,LEMMDATE,LEMMTIME,LEMMTASK,LEMMPER,PREFIX,LEMMPREFIX} = newTask
 
-    const tasksToUpdate = realm.objects('User').filtered('name == $0 AND date == $1 AND time == $2 AND person == $3', TASK[0], DATE[0], TIME[0], PER[0]);
+    let inputTime = LEMMTIME ? LEMMTIME[0] : 'no'
+    let inputHours = LEMMDATE ? LEMMDATE[0] : 'no'
 
-    const hasDay = ['день'].includes(inputText);
-    const daysMatch = inputText.match(/(\d+)\s+дней?/);
 
-    function calculateFutureDate(days) {
-        const currentDate = new Date();
-        const futureDate = new Date(currentDate);
-        futureDate.setDate(currentDate.getDate() + days);
-        return futureDate.toISOString();
+    const hasHour = ['час', 'часы'].some(word => inputTime.includes(word));
+    const hasMinute = ['минута', 'минуты'].some(word => inputTime.includes(word));
+    const hasDay = ['день', 'дни'].some(word => inputHours.includes(word));
+    const hasWeek = ['неделя', 'недели'].some(word => inputHours.includes(word));
+    const hasMonth = ['месяц', 'месяцы'].some(word => inputHours.includes(word));
+    const hasYear = ['год', 'лет'].some(word => inputHours.includes(word));
+
+    let data: iData[] = []
+
+    const PREFFORSEARCH = (DATE.length > 1 && TIME.length > 1) ? 'нет префикса' : PREFIX ? PREFIX[0] : 'нет префикса'
+    const PREFLEMMFORSEARCH = (DATE.length > 1 && TIME.length > 1) ? 'нет префикса' : LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса'
+
+    const tasksFromDB: Array<iData> = getTasks({...newTask, PREFIX: [PREFFORSEARCH] , LEMMPREFIX: [PREFLEMMFORSEARCH]  })
+
+    tasksFromDB.forEach((i: iData) => {
+        data.push(i);
+    });
+
+    if (data.length < 1) {
+        return 'задач не найдено'
     }
 
-    function calculatePastDate(days) {
-        const currentDate = new Date();
-        const pastDate = new Date(currentDate);
-        pastDate.setDate(currentDate.getDate() - days);
-        return pastDate.toISOString();
+    if (DATE.length == 1 && TIME.length == 1 && TASK.length == 1 && PER.length == 1) {
+        return `${data.length} ${data.length === 1 ? 'задача оставлена без изменений' : (data.length >= 2 && data.length <= 4) ? 'задачи оставлены без изменений' : 'задач оставлено  без измененийввв'}`;
     }
 
-    const newTime = (taskTime) => (
-        DATE 
-        ?
-            (TIME ? TIME : taskTime)
-        : 
-            (   
-                TIME
-                ?
-                    (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
-                    (['назад', 'раньше'].includes(PREFIX) && '-2') ||
-                    (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
-                    TIME[0]
-                :
-                taskTime
-            )
-    );
-
-    // const newDate = (taskTime) => (
-        
-    //     DATE
-    //     ? 
-    //         (DATE === 'неделя' || DATE === 'месяц')
-    //         ?
-    //             (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
-    //             (['назад', 'раньше'].includes(PREFIX) && '-2') ||
-    //             (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
-    //             DATE[0]
-    //         :
-            
-    //             hasDay
-    //             ?
-    //                 (['назад', 'раньше'].includes(PREFIX) && calculatePastDate(parseInt(daysMatch[0]))) ||
-    //                 calculateFutureDate(parseInt(daysMatch[0]))
-    //             :
-    //                 (['через', 'позже', 'вперед'].includes(PREFIX) && '+2') ||
-    //                 (['назад', 'раньше'].includes(PREFIX) && '-2') ||
-    //                 (['следующий', 'последующий'].includes(PREFIX) && 'right now') ||
-    //                 DATE[0]// Вывести false, так как ни количество дней, ни 'день' не найдены
-                
-    //         :
-    //     taskDate
-    // );
-
-    const newDate = (taskTime) => {
-        if (DATE) {
-            if (DATE === 'неделя') {
-                if (['через', 'позже', 'вперед'].includes(PREFIX)) {
-                    return calculateFutureDate(parseInt(7))
-                } else if (['назад', 'раньше'].includes(PREFIX)) {
-                    return calculatePastDate(parseInt(7));
-                } else {
-                    return DATE[0];
-                }
-            } else if (DATE === 'месяц') {
-                if (['через', 'позже', 'вперед'].includes(PREFIX)) {
-                    return calculateFutureDate(31)
-                } else if (['назад', 'раньше'].includes(PREFIX)) {
-                    return '-2';
-                } else {
-                    return DATE[0];
-                }
-            } else {
-                if (hasDay) {
-                    if (['назад', 'раньше'].includes(PREFIX)) {
-                        return calculatePastDate(parseInt(daysMatch[0]));
-                    } else {
-                        return calculateFutureDate(parseInt(daysMatch[0]));
-                    }
-                } else {
-                    if (['через', 'позже', 'вперед'].includes(PREFIX)) {
-                        return '+2';
-                    } else if (['назад', 'раньше'].includes(PREFIX)) {
-                        return '-2';
-                    } else if (['следующий', 'последующий'].includes(PREFIX)) {
-                        return 'right now';
-                    } else {
-                        return DATE[0];
-                    }
-                }
-            }
-        } else {
-            return taskDate;
-        }
-    };
-
-
-      
     realm.write(() => {
         // Изменяем свойства объектов, как вам необходимо
-        tasksToUpdate.forEach(task => {
-                task.date = DATE.length > 1 ? DATE[1] : DATE[0]; // замените на новое значение
-                task.time = (TIME.length > 1 && TIME[1] || TIME.length == 1 && TIME[0])
-                task.name = (TASK.length > 1 && TASK[1] || TASK.length == 1 && task.name)
-                task.person = (PER.length > 1 && PER[1] || PER.length == 1 && PER[0])
+        data.forEach(task => {
+                task.date = DATE.length > 1 ? newDateFuturePastParser(DATE[1], LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasDay, hasWeek, hasMonth, hasYear) : task.date; // замените на новое значение
+                task.time = TIME.length > 1 ? newTimeFuturePastParser(TIME[1], task.date, task.lemmaDate, LEMMPREFIX ? LEMMPREFIX[0] : 'нет префикса', hasHour, hasMinute,) : task.time;
+                task.name = TASK.length > 1 ? TASK[1] : task.name;
+                task.person = PER.length > 1 ? PER[1] : task.person;
                 // замените на новое значение
                 // ... другие изменения
         });
     });
 
-    return 'задание обновлено'
+    return `${data.length} ${data.length === 1 ? ' задача обновлена' : (data.length >= 2 && data.length <= 4) ? ' задачи обновлены' : ' задач обновлено'}`;
 }
 
-export function whoCreated(newTask) {
-    const foundedTasks = getTasks(newTask)
-    const answer = foundedTasks.map(i=> {return {created: i.createdAt, updated: i.updatedAt, creator: 'вы'}})
-    return answer
-}
 
 export function deleteAllUsers() {
   realm.write(() => {
@@ -602,6 +518,7 @@ export function deleteAllUsers() {
     realm.delete(allUsers)
   });
 }
+
 
 export function moveTask(newTask) {
 
